@@ -19,11 +19,7 @@ end
 
 function CreateBar(kind, unitId)
   local bar = CreateFrame("Frame", nil, UIParent)
-  if kind == "POWER" then
-    local kindId, kindString = UnitPowerType(unitId)
-    kind = kindString
-  end
-  
+  kind = ExplainKind(kind, unitId)
   InitializeBar(bar, kind)
   if UnitExists(unitId) then
     ResetBar(bar, kind, unitId)
@@ -73,15 +69,21 @@ function SetFillerColor(bar, kind)
   local g = 0
   local b = 0
   
-  if kind == "HEALTH" then -- 207001 32 112 1
+  if kind == "HEALTH" then
     r, g, b = 32, 112, 1
-  elseif kind == "MANA" then -- 174a89 23 74 137
+  elseif kind == "MANA" then
     r, g, b = 23, 74, 137
-  elseif kind == "RAGE" then -- 930900 147 9 0
+  elseif kind == "RAGE" then
     r, g, b = 147, 9, 0
-  elseif kind == "ENERGY" then -- 939000 147 0 9
-    r, g, b = 147, 0, 9
-  elseif kind == "RUNIC_POWER" then -- 3095a7 48 149 167
+  elseif kind == "ENERGY" then
+    r, g, b = 147, 144, 0
+  elseif kind == "RUNIC_POWER" then
+    r, g, b = 48, 149, 167
+  elseif kind == "FOCUS" then
+    r, g, b = 48, 149, 167
+  elseif kind == "AMMOSLOT" then
+    r, g, b = 48, 149, 167
+  elseif kind == "FUEL" then
     r, g, b = 48, 149, 167
   end
   
@@ -89,11 +91,7 @@ function SetFillerColor(bar, kind)
 end
 
 function BindBar(bar, kind, unitId)
-  if kind == "POWER" then
-    local kindId, kindString = UnitPowerType(unitId)
-    kind = kindString
-  end
-  
+  kind = ExplainKind(kind, unitId)
   local kindValueEvent = "UNIT_"..kind
   local kindMaxValueEvent = "UNIT_MAX"..kind
   
@@ -112,11 +110,7 @@ end
 
 -- updates bar fillness/color/visibility
 function UpdateBar(bar, kind, unitId)
-  if kind == "POWER" then
-    local kindId, kindString = UnitPowerType(unitId)
-    kind = kindString
-  end
-  
+  kind = ExplainKind(kind, unitId)
   local value, maxValue
   
   if kind == "HEALTH" then
@@ -128,12 +122,21 @@ function UpdateBar(bar, kind, unitId)
   end
   
   bar.filler:SetHeight((barOptions["height"] - barOptions["padding"] * 2)*value/maxValue)
-  SetFillerColor(bar.filler, kind)
+end
+
+function ExplainKind(kind, unitId)
+  if kind == "POWER" then
+    local kindId, kindString = UnitPowerType(unitId)
+    kind = kindString
+  end
+  return kind
 end
 
 -- used when target changed or power type changed
 function ResetBar(bar, kind, unitId)
+  kind = ExplainKind(kind, unitId)
   BindBar(bar, kind, unitId)
+  SetFillerColor(bar.filler, kind)
   UpdateBar(bar, kind, unitId)
   bar:Show()
 end
