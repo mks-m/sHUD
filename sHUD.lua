@@ -21,11 +21,7 @@ function CreateBar(kind, unitId)
   local bar = CreateFrame("Frame", nil, UIParent)
   kind = ExplainKind(kind, unitId)
   InitializeBar(bar, kind)
-  if UnitExists(unitId) then
-    ResetBar(bar, kind, unitId)
-  else
-    HideBar(bar)
-  end
+  ResetBar(bar, kind, unitId)
   
   barCount = barCount + 1
   return bar
@@ -134,31 +130,31 @@ end
 
 -- used when target changed or power type changed
 function ResetBar(bar, kind, unitId)
-  kind = ExplainKind(kind, unitId)
-  BindBar(bar, kind, unitId)
-  SetFillerColor(bar.filler, kind)
-  UpdateBar(bar, kind, unitId)
-  bar:Show()
+  if UnitExists(unitId) then
+    kind = ExplainKind(kind, unitId)
+    BindBar(bar, kind, unitId)
+    SetFillerColor(bar.filler, kind)
+    UpdateBar(bar, kind, unitId)
+    bar:Show()
+  else
+    bar:UnregisterAllEvents()
+    bar:Hide()
+  end
 end
 
-function HideBar(bar)
-  bar:UnregisterAllEvents()
-  bar:Hide()
-end
-
-function ChangedTargetOrPower()
+function MainEventHandler()
   if event == "PLAYER_TARGET_CHANGED" then
-    if UnitExists("target") then    
-      ResetBar(barFrames['targetHealthBar'], "HEALTH", "target")
-      ResetBar(barFrames['targetPowerBar'], "POWER", "target")
-    else
-      HideBar(barFrames['targetHealthBar'])
-      HideBar(barFrames['targetPowerBar'])
-    end
-  else -- display power changed here
+    ResetBar(barFrames['targetHealthBar'], "HEALTH", "target")
+    ResetBar(barFrames['targetPowerBar'], "POWER", "target")
+  elseif event == "UNIT_DISPLAYPOWER" then -- display power changed here
     if arg1 == "player" or arg1 == "target" then
       ResetBar(barFrames[arg1..'PowerBar'], "POWER", "target")
     end
+  else
+    ResetBar(barFrames['playerHealthBar'], "HEALTH", "player")
+    ResetBar(barFrames['playerPowerBar'], "POWER", "player")
+    ResetBar(barFrames['targetHealthBar'], "HEALTH", "target")
+    ResetBar(barFrames['targetPowerBar'], "POWER", "target")
   end
 end
 
@@ -171,9 +167,10 @@ function sHUD_OnLoad()
     barFrames['targetPowerBar']  = CreatePowerBar('target')
 
     overrideFrame:UnregisterAllEvents();
-    overrideFrame:SetScript("OnEvent", ChangedTargetOrPower);
+    overrideFrame:SetScript("OnEvent", MainEventHandler);
     overrideFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
     overrideFrame:RegisterEvent("UNIT_DISPLAYPOWER")
+    overrideFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
     
     SetCVar("uiScale", 768/string.match(({GetScreenResolutions()})[GetCurrentResolution()], "%d+x(%d+)"))
   end
