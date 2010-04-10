@@ -1,170 +1,183 @@
-local barFrames = {}
+local Bar = {
+  bars    = {},
+  count   = 0,
+  options = {
+    height   = 100, 
+    width    = 10, 
+    distance = 100,
+    spacing  = 2, 
+    padding  = 1,
+    perfect  = 1 }
+}
 
-local barOptions = { 
-  ["height"]   = 100, 
-  ["width"]    = 10, 
-  ["distance"] = 100,
-  ["spacing"]  = 2, 
-  ["padding"]  = 1 }
-
-local barCount = 0
-
-function CreatePowerBar(unitId)
-  return CreateBar("POWER", unitId)
-end
-
-function CreateHealthBar(unitId)
-  return CreateBar("HEALTH", unitId)
-end
-
-function CreateBar(kind, unitId)
-  local bar = CreateFrame("Frame", nil, UIParent)
-  kind = ExplainKind(kind, unitId)
-  InitializeBar(bar, kind)
-  ResetBar(bar, kind, unitId)
+function Bar:new(o)
+  if not o.kind then
+    return nil
+  end
   
-  barCount = barCount + 1
-  return bar
-end
-
-function Debug(s, arg1, arg2, arg3)
-  DEFAULT_CHAT_FRAME:AddMessage(s:format(arg1, arg2, arg3))
-end
-
-function InitializeBar(bar, kind)
-  local index, even = math.modf(barCount / 2)
+  if not o.unitId then
+    return nil
+  end
   
-  local offsetX = barOptions["distance"] + index * (barOptions["width"] + barOptions["spacing"])
+  setmetatable(o, self)
+  self.__index = self
+  
+  o:Initialize()
+  o:Reset()
+  
+  Bar.bars[o.unitId..o.kind] = o
+  Bar.count = Bar.count + 1
+  
+  return o
+end
+
+function Bar:Initialize()
+  if self.kind == "POWER" then
+    local powerId, powerString = UnitPowerType(self.unitId)
+    self.power = powerString
+  end
+  
+  local index, even = math.modf(Bar.count / 2)
+  
+  local offsetX = Bar.options.distance + index * (Bar.options.width + Bar.options.spacing)
   if even < 0.4 then
     offsetX = -offsetX
   end
   
-  bar:SetFrameStrata("BACKGROUND")
-  bar:SetWidth(barOptions["width"])
-  bar:SetHeight(barOptions["height"])
+  local frame = CreateFrame("Frame", nil, UIParent)
+  frame:SetFrameStrata("BACKGROUND")
+  frame:SetWidth(Bar.options["width"])
+  frame:SetHeight(Bar.options["height"])
   
-  bar.texture = bar:CreateTexture()
-  bar.texture:SetAllPoints(bar)
-  bar.texture:SetTexture(0, 0, 0)
-  bar:SetPoint("CENTER", offsetX, 0)
+  frame.texture = frame:CreateTexture()
+  frame.texture:SetAllPoints(frame)
+  frame.texture:SetTexture(0, 0, 0)
+  frame:SetPoint("CENTER", offsetX, 0)
   
-  local filler = CreateFrame("Frame", nil, bar)
+  self.frame = frame
+  
+  local filler = CreateFrame("Frame", nil, self.frame)
   filler:SetFrameStrata("BACKGROUND")
-  filler:SetWidth(barOptions["width"] - barOptions["padding"] * 2)
-  filler:SetHeight(barOptions["height"] - barOptions["padding"] * 2)
+  filler:SetWidth(Bar.options.width - Bar.options.padding * 2)
+  filler:SetHeight(Bar.options.height - Bar.options.padding * 2)
   filler.texture = filler:CreateTexture()
   filler.texture:SetAllPoints(filler)
-  SetFillerColor(filler, kind)
-  filler:SetPoint("BOTTOMLEFT", barOptions["padding"], barOptions["padding"])
+  filler:SetPoint("BOTTOMLEFT", Bar.options.padding, Bar.options.padding)
   
-  bar.filler = filler
+  self.filler = filler
+  self:UpdateFillerColor()
 end
 
-function SetFillerColor(bar, kind)
+function Bar:UpdateFillerColor()
   local r = 0
   local g = 0
   local b = 0
   
-  if kind == "HEALTH" then
+  if self.kind == "HEALTH" then
     r, g, b = 32, 112, 1
-  elseif kind == "MANA" then
+  elseif self.power == "MANA" then
     r, g, b = 23, 74, 137
-  elseif kind == "RAGE" then
+  elseif self.power == "RAGE" then
     r, g, b = 147, 9, 0
-  elseif kind == "ENERGY" then
+  elseif self.power == "ENERGY" then
     r, g, b = 147, 144, 0
-  elseif kind == "RUNIC_POWER" then
+  elseif self.power == "RUNIC_POWER" then
     r, g, b = 48, 149, 167
-  elseif kind == "FOCUS" then
+  elseif self.power == "FOCUS" then
     r, g, b = 48, 149, 167
-  elseif kind == "AMMOSLOT" then
+  elseif self.power == "AMMOSLOT" then
     r, g, b = 48, 149, 167
-  elseif kind == "FUEL" then
+  elseif self.power == "FUEL" then
     r, g, b = 48, 149, 167
   end
   
-  bar.texture:SetTexture(r / 255, g / 255, b / 255)
+  self.filler.texture:SetTexture(r / 255, g / 255, b / 255)
 end
 
-function BindBar(bar, kind, unitId)
-  kind = ExplainKind(kind, unitId)
+function Bar:Reset()
+  if UnitExists(self.unitId) then
+    if self.kind == "POWER" then
+      local powerId, powerString = UnitPowerType(self.unitId)
+      self.power = powerString
+    end
+    self:BindFiller()
+    self:UpdateFillerColor()
+    self:UpdateFillerHeight()
+    self.frame:Show()
+  else
+    self.filler:UnregisterAllEvents()
+    self.frame:Hide()
+  end
+end
+
+function Bar:BindFiller()
+  local kind = self.power or self.kind
   local kindValueEvent = "UNIT_"..kind
   local kindMaxValueEvent = "UNIT_MAX"..kind
   
-  bar:UnregisterAllEvents()
+  self.filler:UnregisterAllEvents()
   
-  bar:SetScript("OnEvent", function()
-    if unitId == arg1 and (event == kindValueEvent or event == kindMaxValueEvent) then
-      DEFAULT_CHAT_FRAME:AddMessage(msg)
-      UpdateBar(bar, kind, unitId)
+  self.filler:SetScript("OnEvent", function()
+    if self.unitId == arg1 and (event == kindValueEvent or event == kindMaxValueEvent) then
+      self:UpdateFillerHeight()
     end
   end)
   
-  bar:RegisterEvent(kindValueEvent)
-  bar:RegisterEvent(kindMaxValueEvent)
+  self.filler:RegisterEvent(kindValueEvent)
+  self.filler:RegisterEvent(kindMaxValueEvent)
 end
 
--- updates bar fillness/color/visibility
-function UpdateBar(bar, kind, unitId)
-  kind = ExplainKind(kind, unitId)
+function Bar:UpdateFillerHeight()
   local value, maxValue
   
-  if kind == "HEALTH" then
-    value = UnitHealth(unitId)
-    maxValue = UnitHealthMax(unitId)
+  if self.kind == "HEALTH" then
+    value = UnitHealth(self.unitId)
+    maxValue = UnitHealthMax(self.unitId)
   else
-    value = UnitPower(unitId)
-    maxValue = UnitPowerMax(unitId)
+    value = UnitPower(self.unitId)
+    maxValue = UnitPowerMax(self.unitId)
   end
   
-  bar.filler:SetHeight((barOptions["height"] - barOptions["padding"] * 2)*value/maxValue)
-end
-
-function ExplainKind(kind, unitId)
-  if kind == "POWER" then
-    local kindId, kindString = UnitPowerType(unitId)
-    kind = kindString
-  end
-  return kind
-end
-
--- used when target changed or power type changed
-function ResetBar(bar, kind, unitId)
-  if UnitExists(unitId) then
-    kind = ExplainKind(kind, unitId)
-    BindBar(bar, kind, unitId)
-    SetFillerColor(bar.filler, kind)
-    UpdateBar(bar, kind, unitId)
-    bar:Show()
+  local newHeight = (Bar.options.height - Bar.options.padding * 2) * value / maxValue
+  if newHeight < 1 and self.filler:IsShown() then
+    self.filler:Hide()
   else
-    bar:UnregisterAllEvents()
-    bar:Hide()
+    self.filler:SetHeight(newHeight)
+    self.filler:Show()
   end
 end
 
 function MainEventHandler()
   if event == "PLAYER_TARGET_CHANGED" then
-    ResetBar(barFrames['targetHealthBar'], "HEALTH", "target")
-    ResetBar(barFrames['targetPowerBar'], "POWER", "target")
-  elseif event == "UNIT_DISPLAYPOWER" then -- display power changed here
+    Bar.bars['targetHEALTH']:Reset()
+    Bar.bars['targetPOWER']:Reset()
+  elseif event == "UNIT_DISPLAYPOWER" then
     if arg1 == "player" or arg1 == "target" then
-      ResetBar(barFrames[arg1..'PowerBar'], "POWER", "target")
+      Bar.bars[arg1..'POWER']:Reset()
     end
-  else
-    ResetBar(barFrames['playerHealthBar'], "HEALTH", "player")
-    ResetBar(barFrames['playerPowerBar'], "POWER", "player")
-    ResetBar(barFrames['targetHealthBar'], "HEALTH", "target")
-    ResetBar(barFrames['targetPowerBar'], "POWER", "target")
+  else -- PLAYER_ENTERING_WORLD
+    Bar.bars['playerPOWER']:Reset()
+    Bar.bars['playerHEALTH']:Reset()
+    Bar.bars['targetPOWER']:Reset()
+    Bar.bars['targetHEALTH']:Reset()
   end
+end
+
+function CreatePowerBar(unitId)
+  return Bar:new{kind="POWER", unitId=unitId}
+end
+
+function CreateHealthBar(unitId)
+  return Bar:new{kind="HEALTH", unitId=unitId}
 end
 
 local overrideFrame = CreateFrame("Frame")
 function sHUD_OnLoad()
   if arg1 == "sHUD" then
-    barFrames['playerHealthBar'] = CreateHealthBar('player')
-    barFrames['playerPowerBar']  = CreatePowerBar('player')
-    barFrames['targetHealthBar'] = CreateHealthBar('target')
-    barFrames['targetPowerBar']  = CreatePowerBar('target')
+    CreateHealthBar('player')
+    CreatePowerBar('player')
+    CreateHealthBar('target')
+    CreatePowerBar('target')
 
     overrideFrame:UnregisterAllEvents();
     overrideFrame:SetScript("OnEvent", MainEventHandler);
@@ -172,8 +185,16 @@ function sHUD_OnLoad()
     overrideFrame:RegisterEvent("UNIT_DISPLAYPOWER")
     overrideFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
     
-    SetCVar("uiScale", 768/string.match(({GetScreenResolutions()})[GetCurrentResolution()], "%d+x(%d+)"))
+    if Bar.options.perfect then
+      local uiScale = 768/string.match(({GetScreenResolutions()})[GetCurrentResolution()], "%d+x(%d+)")
+      RegisterCVar("useUiScale", 1)
+      RegisterCVar("uiScale", uiScale)
+    end
   end
 end
 overrideFrame:SetScript("OnEvent", sHUD_OnLoad);
 overrideFrame:RegisterEvent("ADDON_LOADED");
+
+function Debug(s, arg1, arg2, arg3)
+  DEFAULT_CHAT_FRAME:AddMessage(s:format(arg1, arg2, arg3))
+end
