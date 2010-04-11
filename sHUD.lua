@@ -139,7 +139,7 @@ function Bar:UpdateFillerHeight()
   end
   
   local newHeight = (Bar.options.height - Bar.options.padding * 2) * value / maxValue
-  if newHeight < 1 and self.filler:IsShown() then
+  if newHeight < 1 then
     self.filler:Hide()
   else
     self.filler:SetHeight(newHeight)
