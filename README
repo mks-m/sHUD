@@ -1,3 +1,12 @@
 sHUD is very simple and pixelperfect addon that replaces IceHUD for me which became resource and performance hog recently
 
 not configurable, 10kb memory usage, 2 health bars and 2 power bars. what else would you need?
+
+addon rescales your interface to be pixelperfect. if you dont want perfectness - disable it in line 10 of sHUD.lua
+
+you can also change other options in there:
+
+* height, width - do i really have to explain that?
+* distance - from center of screen to the point where closest bars are shown
+* spacing - between bars
+* padding - width of black border

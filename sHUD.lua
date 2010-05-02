@@ -2,10 +2,10 @@ local Bar = {
   bars    = {},
   count   = 0,
   options = {
-    height   = 100, 
-    width    = 10, 
-    distance = 100,
-    spacing  = 2, 
+    height   = 150, 
+    width    = 14, 
+    distance = 120,
+    spacing  = 3, 
     padding  = 1,
     perfect  = 1 }
 }
@@ -189,6 +189,8 @@ function sHUD_OnLoad()
       local uiScale = 768/string.match(({GetScreenResolutions()})[GetCurrentResolution()], "%d+x(%d+)")
       RegisterCVar("useUiScale", 1)
       RegisterCVar("uiScale", uiScale)
+      SetCVar("useUiScale", 1)
+      SetCVar("uiScale", uiScale)
     end
   end
 end
