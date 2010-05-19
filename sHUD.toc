@@ -1,7 +1,7 @@
 ## Interface: 30300
 ## Title: sHUD
 ## Author: keymone
-## Version: 0.2
+## Version: 0.3
 ## Notes: simple pixelperfect bars for player/target hp/power
 config.lua
 sHUD.lua
