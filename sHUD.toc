@@ -3,4 +3,5 @@
 ## Author: keymone
 ## Version: 0.2
 ## Notes: simple pixelperfect bars for player/target hp/power
+config.lua
 sHUD.lua
