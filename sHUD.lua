@@ -157,21 +157,16 @@ function MainEventHandler()
   end
 end
 
-function CreatePowerBar(unitId)
-  return Bar:new{kind="POWER", unitId=unitId}
-end
-
-function CreateHealthBar(unitId)
-  return Bar:new{kind="HEALTH", unitId=unitId}
+function CreateBar(kind, unitId)
+  return Bar:new{kind=strupper(kind), unitId=unitId}
 end
 
 local overrideFrame = CreateFrame("Frame")
 function sHUD_OnLoad()
   if arg1 == "sHUD" then
-    CreateHealthBar('player')
-    CreatePowerBar('player')
-    CreateHealthBar('target')
-    CreatePowerBar('target')
+    for i,opts in ipairs(Bar.options.bars) do
+      CreateBar(opts[1], opts[2])
+    end
 
     overrideFrame:UnregisterAllEvents();
     overrideFrame:SetScript("OnEvent", MainEventHandler);
